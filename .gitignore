@@ -1,0 +1,9 @@
+.*
+!.gitignore
+
+*.log
+kis
+store/*
+!.gitkeep
+
+Thumbs.db
