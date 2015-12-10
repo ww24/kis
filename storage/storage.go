@@ -103,11 +103,11 @@ func (storage *Storage) Fetch(id string, extension string) (buff bytes.Buffer, m
 			NumColors: 256,
 		})
 		mimeType = "image/gif"
-	case "":
-		fallthrough
 	case ".png":
 		err = png.Encode(&buff, img)
 		mimeType = "image/png"
+	case "":
+		fallthrough
 	case ".jpg":
 		err = jpeg.Encode(&buff, img, &jpeg.Options{
 			Quality: 100,
