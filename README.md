@@ -14,11 +14,13 @@ API specification
 -----------------
 ### Save image
 #### Request
-* endpoint    : `/api`
+* endpoint    : `/api/`
 * method      : POST
-* Content-Type: `multipart/form-data`
+* Content-Type: `multipart/form-data` or other
 * keyname     : `image`
 * filetype    : GIF or PNG or JPEG or WEBP
+
+※ If Content-Type isn't `multipart/form-data` then server get image file from request body and judge a MIME type from file.
 
 #### Response
 * Content-Type: `application/json`
@@ -36,6 +38,8 @@ API specification
 
 ```sh
 curl "http://localhost:3000/api/" --verbose -F "image=@test.jpg"
+# or
+curl "http://localhost:3000/api/" --verbose -H "Content-Type: image/jpeg" --data-binary "@test.jpg"
 ```
 
 ### Fetch image

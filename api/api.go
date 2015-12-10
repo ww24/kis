@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -83,22 +84,33 @@ func NewAPI(router *gin.RouterGroup) (api *API) {
 	api.router.POST("/", func(ctx *gin.Context) {
 		defer internalServerError(ctx)
 
-		// receive image file
-		file, _, err := ctx.Request.FormFile("image")
-		if err != nil {
-			ctx.JSON(400, gin.H{
-				"status": "ng",
-				"error":  "bad request",
-			})
-			return
-		}
-		defer file.Close()
+		contentType := strings.Split(ctx.Request.Header.Get("Content-Type"), ";")[0]
+		fmt.Println(contentType)
+
+		id := st.GenerateID()
 
 		// save image into store
-		id := st.GenerateID()
-		err = st.Save(id, file)
-		if err != nil {
-			panic(err)
+		switch contentType {
+		case "multipart/form-data":
+			// receive image file
+			file, _, err := ctx.Request.FormFile("image")
+			if err != nil {
+				ctx.JSON(400, gin.H{
+					"status": "ng",
+					"error":  "bad request",
+				})
+				return
+			}
+			defer file.Close()
+			err = st.Save(id, file)
+			if err != nil {
+				panic(err)
+			}
+		default:
+			err := st.Save(id, ctx.Request.Body)
+			if err != nil {
+				panic(err)
+			}
 		}
 
 		ctx.JSON(200, gin.H{
