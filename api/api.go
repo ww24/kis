@@ -30,7 +30,7 @@ func NewAPI(router *gin.RouterGroup) (api *API) {
 
 		ctx.JSON(200, gin.H{
 			"status":  "ok",
-			"version": "0.1.0",
+			"version": "0.2.0",
 		})
 	})
 
