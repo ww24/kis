@@ -20,7 +20,7 @@ API specification
 * keyname     : `image`
 * filetype    : GIF or PNG or JPEG or WEBP
 
-※ If Content-Type isn't `multipart/form-data` then server get image file from request body and judge a MIME type from file.
+※ If Content-Type isn't `multipart/form-data` then server get image file from request body and judge a MIME type of file.
 
 #### Response
 * Content-Type: `application/json`
