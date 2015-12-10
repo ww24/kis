@@ -110,7 +110,7 @@ func (storage *Storage) Fetch(id string, extension string) (buff bytes.Buffer, m
 		fallthrough
 	case ".jpg":
 		err = jpeg.Encode(&buff, img, &jpeg.Options{
-			Quality: 100,
+			Quality: 99,
 		})
 		mimeType = "image/jpeg"
 	case ".webp":
