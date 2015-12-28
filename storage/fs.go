@@ -9,27 +9,25 @@ import (
 	"github.com/chai2010/webp"
 )
 
-var (
-	mutex = new(sync.Mutex)
-)
-
 // FileSystemStore structure
 type FileSystemStore struct {
-	dir string
+	mutex *sync.Mutex
+	dir   string
 }
 
 // NewFileSystemStore constructor
 func NewFileSystemStore() (fs *FileSystemStore) {
 	fs = &FileSystemStore{
-		dir: "store",
+		mutex: new(sync.Mutex),
+		dir:   "store",
 	}
 	return
 }
 
 // Save method
 func (fs *FileSystemStore) Save(id string, img image.Image) (err error) {
-	mutex.Lock()
-	defer mutex.Unlock()
+	fs.mutex.Lock()
+	defer fs.mutex.Unlock()
 
 	var file *os.File
 	pathstr := filepath.Join(fs.dir, id+".webp")
@@ -51,6 +49,10 @@ func (fs *FileSystemStore) Fetch(id string) (img image.Image, err error) {
 	var file *os.File
 	pathstr := filepath.Join(fs.dir, id+".webp")
 	file, err = os.Open(pathstr)
+	if os.IsNotExist(err) {
+		err = nil
+		return
+	}
 	if err != nil {
 		return
 	}
@@ -61,20 +63,22 @@ func (fs *FileSystemStore) Fetch(id string) (img image.Image, err error) {
 }
 
 // Exists method
-func (fs *FileSystemStore) Exists(id string) (exists bool) {
-	mutex.Lock()
-	defer mutex.Unlock()
+func (fs *FileSystemStore) Exists(id string) (exists bool, err error) {
+	fs.mutex.Lock()
+	defer fs.mutex.Unlock()
 
 	pathstr := filepath.Join(fs.dir, id+".webp")
-	_, err := os.Stat(pathstr)
+	_, err = os.Stat(pathstr)
 	exists = err == nil
+
+	err = nil
 	return
 }
 
 // Remove method
 func (fs *FileSystemStore) Remove(id string) (err error) {
-	mutex.Lock()
-	defer mutex.Unlock()
+	fs.mutex.Lock()
+	defer fs.mutex.Unlock()
 
 	pathstr := filepath.Join(fs.dir, id+".webp")
 	err = os.Remove(pathstr)

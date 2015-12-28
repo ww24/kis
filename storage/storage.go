@@ -23,24 +23,53 @@ type Storage struct {
 type store interface {
 	Save(string, image.Image) error
 	Fetch(string) (image.Image, error)
-	Exists(string) bool
+	Exists(string) (bool, error)
 	Remove(string) error
 }
 
+const (
+	// FileSystem constant value
+	FileSystem = 0
+	// LevelDB constant value
+	LevelDB = 1
+)
+
+var (
+	// ErrUnsupportedMIMEType error value
+	ErrUnsupportedMIMEType = errors.New("unsupported MIME type")
+	// ErrUnsupportedFileExtension error value
+	ErrUnsupportedFileExtension = errors.New("unsupported file extension")
+)
+
 // NewStorage constructor
-func NewStorage(st store) (storage *Storage) {
+func NewStorage(storeType int) (storage *Storage) {
+	var storeImplementation store
+	switch storeType {
+	case FileSystem:
+		storeImplementation = NewFileSystemStore()
+	case LevelDB:
+		storeImplementation = NewLevelDBStore()
+	default:
+		panic(errors.New("invalid store type"))
+	}
+
 	storage = &Storage{
-		store: st,
+		store: storeImplementation,
 	}
 	return storage
 }
 
 // GenerateID will generate unique file ID
-func (storage *Storage) GenerateID() (id string) {
+func (storage *Storage) GenerateID() (id string, err error) {
 	idv4 := uuid.NewV4()
 	id = idv4.String()
-	if storage.Exists(id) {
-		id = storage.GenerateID()
+
+	exists, err := storage.Exists(id)
+	if err != nil {
+		panic(err)
+	}
+	if exists {
+		id, err = storage.GenerateID()
 	}
 	return
 }
@@ -65,7 +94,7 @@ func (storage *Storage) Save(id string, reader io.Reader) (err error) {
 	case "image/webp":
 		img, err = webp.Decode(bytes.NewReader(data))
 	default:
-		err = errors.New("unsupported MIME type")
+		err = ErrUnsupportedMIMEType
 	}
 	if err != nil {
 		return
@@ -82,6 +111,9 @@ func (storage *Storage) ReadMetaData(id string) (width, height int, err error) {
 	if err != nil {
 		return
 	}
+	if img == nil {
+		return
+	}
 
 	rect := img.Bounds()
 	width = rect.Max.X - rect.Min.X
@@ -94,6 +126,9 @@ func (storage *Storage) Fetch(id string, extension string) (buff bytes.Buffer, m
 	var img image.Image
 	img, err = storage.store.Fetch(id)
 	if err != nil {
+		return
+	}
+	if img == nil {
 		return
 	}
 
@@ -120,7 +155,7 @@ func (storage *Storage) Fetch(id string, extension string) (buff bytes.Buffer, m
 		})
 		mimeType = "image/webp"
 	default:
-		err = errors.New("unsupported file extension")
+		err = ErrUnsupportedFileExtension
 	}
 	if err != nil {
 		return
@@ -130,7 +165,7 @@ func (storage *Storage) Fetch(id string, extension string) (buff bytes.Buffer, m
 }
 
 // Exists method
-func (storage *Storage) Exists(id string) bool {
+func (storage *Storage) Exists(id string) (bool, error) {
 	return storage.store.Exists(id)
 }
 

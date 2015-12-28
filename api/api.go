@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -11,7 +10,8 @@ import (
 )
 
 var (
-	st = storage.NewStorage(storage.NewFileSystemStore())
+	// use LevelDB instead of FileSystem
+	store = storage.NewStorage(storage.LevelDB)
 )
 
 // API structure
@@ -31,7 +31,7 @@ func NewAPI(router *gin.RouterGroup) (api *API) {
 
 		ctx.JSON(200, gin.H{
 			"status":  "ok",
-			"version": "0.2.0",
+			"version": "0.3.0",
 		})
 	})
 
@@ -44,17 +44,12 @@ func NewAPI(router *gin.RouterGroup) (api *API) {
 		id := strings.TrimSuffix(idext, ext)
 
 		if ext == ".json" {
-			width, height, err := st.ReadMetaData(id)
+			width, height, err := store.ReadMetaData(id)
 			if err != nil {
-				if os.IsNotExist(err) {
-					ctx.JSON(404, gin.H{
-						"status": "ng",
-						"error":  err.Error(),
-					})
-					return
-				}
-
 				panic(err)
+			}
+			if width == 0 && height == 0 {
+				panic(404)
 			}
 			ctx.JSON(200, gin.H{
 				"status": "ok",
@@ -64,17 +59,19 @@ func NewAPI(router *gin.RouterGroup) (api *API) {
 			return
 		}
 
-		buff, mimeType, err := st.Fetch(id, ext)
+		buff, mimeType, err := store.Fetch(id, ext)
+		if err == storage.ErrUnsupportedFileExtension {
+			ctx.JSON(400, gin.H{
+				"status": "ng",
+				"error":  err.Error(),
+			})
+			return
+		}
 		if err != nil {
-			if os.IsNotExist(err) {
-				ctx.JSON(404, gin.H{
-					"status": "ng",
-					"error":  "file not found",
-				})
-				return
-			}
-
 			panic(err)
+		}
+		if buff.Len() == 0 {
+			panic(404)
 		}
 
 		ctx.Data(200, mimeType, buff.Bytes())
@@ -87,7 +84,10 @@ func NewAPI(router *gin.RouterGroup) (api *API) {
 		contentType := strings.Split(ctx.Request.Header.Get("Content-Type"), ";")[0]
 		fmt.Println(contentType)
 
-		id := st.GenerateID()
+		id, err := store.GenerateID()
+		if err != nil {
+			panic(err)
+		}
 
 		// save image into store
 		switch contentType {
@@ -97,17 +97,24 @@ func NewAPI(router *gin.RouterGroup) (api *API) {
 			if err != nil {
 				ctx.JSON(400, gin.H{
 					"status": "ng",
-					"error":  "bad request",
+					"error":  `require "image" key for multipart/form-data`,
 				})
 				return
 			}
 			defer file.Close()
-			err = st.Save(id, file)
+			err = store.Save(id, file)
 			if err != nil {
 				panic(err)
 			}
 		default:
-			err := st.Save(id, ctx.Request.Body)
+			err := store.Save(id, ctx.Request.Body)
+			if err == storage.ErrUnsupportedMIMEType {
+				ctx.JSON(400, gin.H{
+					"status": "ng",
+					"error":  err.Error(),
+				})
+				return
+			}
 			if err != nil {
 				panic(err)
 			}

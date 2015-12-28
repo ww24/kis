@@ -14,6 +14,17 @@ func internalServerError(ctx *gin.Context) {
 		return
 	}
 
+	if code, ok := cause.(int); ok {
+		switch code {
+		case 404:
+			ctx.JSON(404, gin.H{
+				"status": "ng",
+				"error":  "file not found",
+			})
+		}
+		return
+	}
+
 	if err, ok := cause.(error); ok {
 		ctx.JSON(500, gin.H{
 			"status": "ng",
