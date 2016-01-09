@@ -1,0 +1,17 @@
+[Unit]
+Description=KIS Server
+After=network.target
+
+[Service]
+WorkingDirectory=/home/sonata/kis
+ExecStart=/home/sonata/kis/kis -port 3000 -mode release
+ExecReload=/bin/kill -s HUP $MAINPID
+ExecStop=/bin/kill -s QUIT $MAINPID
+Type=simple
+Restart=on-failure
+User=sonata
+Group=www-data
+
+[Install]
+WantedBy=multi-user.target
+Alias=kis.service
