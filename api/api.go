@@ -43,7 +43,7 @@ func NewAPI(router *echo.Group) (api *API) {
 	api.router.Get("/", func(ctx *echo.Context) (err error) {
 		err = ctx.JSON(200, JSON{
 			"status":  "ok",
-			"version": "0.3.0",
+			"version": "0.4.0",
 		})
 
 		return
