@@ -1,9 +1,12 @@
 package api
 
 import (
+	"encoding/hex"
 	"mime/multipart"
 	"path/filepath"
 	"strings"
+
+	"crypto/sha256"
 
 	"github.com/labstack/echo"
 	"github.com/ww24/kis/storage"
@@ -12,6 +15,8 @@ import (
 var (
 	// use LevelDB instead of FileSystem
 	store = storage.NewStorage(storage.LevelDB)
+
+	hashedSecret string
 )
 
 // JSON type
@@ -22,6 +27,12 @@ type API struct {
 	router *echo.Group
 }
 
+func init() {
+	hashedSecret = authSecret("kis.json")["secret"].(string)
+	data := sha256.Sum256([]byte(hashedSecret))
+	hashedSecret = hex.EncodeToString(data[:])
+}
+
 // NewAPI constructor
 func NewAPI(router *echo.Group) (api *API) {
 	api = &API{
@@ -30,8 +41,6 @@ func NewAPI(router *echo.Group) (api *API) {
 
 	// API end point
 	api.router.Get("/", func(ctx *echo.Context) (err error) {
-		// defer internalServerError(ctx)
-
 		err = ctx.JSON(200, JSON{
 			"status":  "ok",
 			"version": "0.3.0",
@@ -41,7 +50,9 @@ func NewAPI(router *echo.Group) (api *API) {
 	})
 
 	api.router.Get("/list", func(ctx *echo.Context) (err error) {
-		// defer internalServerError(ctx)
+		if hashCompare(ctx.Query("secret"), hashedSecret) == false {
+			panic(403)
+		}
 
 		list, err := store.Keys()
 		if err != nil {
@@ -58,8 +69,6 @@ func NewAPI(router *echo.Group) (api *API) {
 
 	// download image file
 	api.router.Get("/:idext", func(ctx *echo.Context) (err error) {
-		// defer internalServerError(ctx)
-
 		idext := ctx.Param("idext")
 		ext := filepath.Ext(idext)
 		id := strings.TrimSuffix(idext, ext)
@@ -107,8 +116,6 @@ func NewAPI(router *echo.Group) (api *API) {
 
 	// upload image file
 	api.router.Post("/", func(ctx *echo.Context) (err error) {
-		// defer internalServerError(ctx)
-
 		contentType := strings.Split(ctx.Request().Header.Get("Content-Type"), ";")[0]
 
 		id, err := store.GenerateID()

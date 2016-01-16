@@ -3,6 +3,7 @@
 
 *.log
 kis
+kis.json
 store/*.webp
 store/leveldb/*
 !.gitkeep

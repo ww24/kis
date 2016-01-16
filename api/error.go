@@ -27,9 +27,14 @@ func internalServerError(ctx *echo.Context) {
 	if code, ok := cause.(int); ok {
 		switch code {
 		case 404:
-			ctx.JSON(404, gin.H{
+			ctx.JSON(404, JSON{
 				"status": "ng",
 				"error":  "file not found",
+			})
+		case 403:
+			ctx.JSON(403, JSON{
+				"status": "ng",
+				"error":  "Forbidden",
 			})
 		}
 		return
