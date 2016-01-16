@@ -1,11 +1,11 @@
 package api
 
 import (
-	"fmt"
+	"mime/multipart"
 	"path/filepath"
 	"strings"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo"
 	"github.com/ww24/kis/storage"
 )
 
@@ -14,54 +14,77 @@ var (
 	store = storage.NewStorage(storage.LevelDB)
 )
 
+// JSON type
+type JSON map[string]interface{}
+
 // API structure
 type API struct {
-	router *gin.RouterGroup
+	router *echo.Group
 }
 
 // NewAPI constructor
-func NewAPI(router *gin.RouterGroup) (api *API) {
+func NewAPI(router *echo.Group) (api *API) {
 	api = &API{
 		router: router,
 	}
 
 	// API end point
-	api.router.GET("/", func(ctx *gin.Context) {
-		defer internalServerError(ctx)
+	api.router.Get("/", func(ctx *echo.Context) (err error) {
+		// defer internalServerError(ctx)
 
-		ctx.JSON(200, gin.H{
+		err = ctx.JSON(200, JSON{
 			"status":  "ok",
 			"version": "0.3.0",
 		})
+
+		return
+	})
+
+	api.router.Get("/list", func(ctx *echo.Context) (err error) {
+		// defer internalServerError(ctx)
+
+		list, err := store.Keys()
+		if err != nil {
+			panic(err)
+		}
+
+		err = ctx.JSON(200, JSON{
+			"status": "ok",
+			"list":   list,
+		})
+
+		return
 	})
 
 	// download image file
-	api.router.GET("/:idext", func(ctx *gin.Context) {
-		defer internalServerError(ctx)
+	api.router.Get("/:idext", func(ctx *echo.Context) (err error) {
+		// defer internalServerError(ctx)
 
 		idext := ctx.Param("idext")
 		ext := filepath.Ext(idext)
 		id := strings.TrimSuffix(idext, ext)
 
 		if ext == ".json" {
-			width, height, err := store.ReadMetaData(id)
+			var width, height int
+			width, height, err = store.ReadMetaData(id)
 			if err != nil {
 				panic(err)
 			}
 			if width == 0 && height == 0 {
 				panic(404)
 			}
-			ctx.JSON(200, gin.H{
+			err = ctx.JSON(200, JSON{
 				"status": "ok",
 				"width":  width,
 				"height": height,
 			})
+
 			return
 		}
 
 		buff, mimeType, err := store.Fetch(id, ext)
 		if err == storage.ErrUnsupportedFileExtension {
-			ctx.JSON(400, gin.H{
+			ctx.JSON(400, JSON{
 				"status": "ng",
 				"error":  err.Error(),
 			})
@@ -74,15 +97,19 @@ func NewAPI(router *gin.RouterGroup) (api *API) {
 			panic(404)
 		}
 
-		ctx.Data(200, mimeType, buff.Bytes())
+		res := ctx.Response()
+		res.Header().Set("Content-Type", mimeType)
+		res.WriteHeader(200)
+		_, err = res.Write(buff.Bytes())
+
+		return
 	})
 
 	// upload image file
-	api.router.POST("/", func(ctx *gin.Context) {
-		defer internalServerError(ctx)
+	api.router.Post("/", func(ctx *echo.Context) (err error) {
+		// defer internalServerError(ctx)
 
-		contentType := strings.Split(ctx.Request.Header.Get("Content-Type"), ";")[0]
-		fmt.Println(contentType)
+		contentType := strings.Split(ctx.Request().Header.Get("Content-Type"), ";")[0]
 
 		id, err := store.GenerateID()
 		if err != nil {
@@ -93,9 +120,10 @@ func NewAPI(router *gin.RouterGroup) (api *API) {
 		switch contentType {
 		case "multipart/form-data":
 			// receive image file
-			file, _, err := ctx.Request.FormFile("image")
+			var file multipart.File
+			file, _, err = ctx.Request().FormFile("image")
 			if err != nil {
-				ctx.JSON(400, gin.H{
+				ctx.JSON(400, JSON{
 					"status": "ng",
 					"error":  `require "image" key for multipart/form-data`,
 				})
@@ -107,9 +135,9 @@ func NewAPI(router *gin.RouterGroup) (api *API) {
 				panic(err)
 			}
 		default:
-			err := store.Save(id, ctx.Request.Body)
+			err = store.Save(id, ctx.Request().Body)
 			if err == storage.ErrUnsupportedMIMEType {
-				ctx.JSON(400, gin.H{
+				err = ctx.JSON(400, JSON{
 					"status": "ng",
 					"error":  err.Error(),
 				})
@@ -120,10 +148,12 @@ func NewAPI(router *gin.RouterGroup) (api *API) {
 			}
 		}
 
-		ctx.JSON(200, gin.H{
+		err = ctx.JSON(200, JSON{
 			"status": "ok",
 			"id":     id,
 		})
+
+		return
 	})
 
 	return

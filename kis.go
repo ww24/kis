@@ -11,7 +11,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
 	"github.com/ww24/kis/api"
 )
 
@@ -22,18 +23,22 @@ var (
 
 func init() {
 	flag.IntVar(&port, "port", 3000, "Set port.")
-	modes := []string{gin.DebugMode, gin.ReleaseMode, gin.TestMode}
-	flag.StringVar(&mode, "mode", gin.DebugMode, "Set Gin Web Framework mode. ["+strings.Join(modes, " or ")+"]")
+	modes := []string{"debug", "release"}
+	flag.StringVar(&mode, "mode", "debug", "Set debug mode for Web Framework. ["+strings.Join(modes, " or ")+"]")
 	flag.Parse()
 }
 
 func main() {
-	gin.SetMode(mode)
 	listener, errch := Serve(":"+strconv.Itoa(port), func() http.Handler {
-		router := gin.Default()
+		router := echo.New()
+		router.SetDebug(mode == "debug")
 
-		router.GET("/", func(ctx *gin.Context) {
-			ctx.String(200, "KIS server works.\n")
+		router.Use(middleware.Logger())
+		router.Use(api.ErrorMiddleware())
+
+		router.Get("/", func(ctx *echo.Context) (err error) {
+			err = ctx.String(200, "KIS server works.\n")
+			return
 		})
 
 		api.NewAPI(router.Group("/api"))

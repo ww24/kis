@@ -48,6 +48,30 @@ func (ld *LevelDBStore) Save(id string, img image.Image) (err error) {
 	return
 }
 
+// Keys method
+func (ld *LevelDBStore) Keys() (list []string, err error) {
+	var db *leveldb.DB
+	db, err = ld.open(nil)
+	if err != nil {
+		return
+	}
+	defer db.Close()
+
+	list = make([]string, 0, 100)
+
+	iter := db.NewIterator(nil, nil)
+	defer iter.Release()
+	for iter.Next() {
+		key := iter.Key()
+		list = append(list, string(key))
+	}
+	err = iter.Error()
+	if err != nil {
+		return
+	}
+	return
+}
+
 // Fetch method
 func (ld *LevelDBStore) Fetch(id string) (img image.Image, err error) {
 	var db *leveldb.DB

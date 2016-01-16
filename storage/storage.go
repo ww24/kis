@@ -22,6 +22,7 @@ type Storage struct {
 
 type store interface {
 	Save(string, image.Image) error
+	Keys() ([]string, error)
 	Fetch(string) (image.Image, error)
 	Exists(string) (bool, error)
 	Remove(string) error
@@ -46,7 +47,8 @@ func NewStorage(storeType int) (storage *Storage) {
 	var storeImplementation store
 	switch storeType {
 	case FileSystem:
-		storeImplementation = NewFileSystemStore()
+		panic(errors.New("Use LevelDBStore instead of FileSystemStore."))
+		// storeImplementation = NewFileSystemStore()
 	case LevelDB:
 		storeImplementation = NewLevelDBStore()
 	default:
@@ -118,6 +120,12 @@ func (storage *Storage) ReadMetaData(id string) (width, height int, err error) {
 	rect := img.Bounds()
 	width = rect.Max.X - rect.Min.X
 	height = rect.Max.Y - rect.Min.Y
+	return
+}
+
+// Keys method
+func (storage *Storage) Keys() (list []string, err error) {
+	list, err = storage.store.Keys()
 	return
 }
 

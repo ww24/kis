@@ -2,13 +2,23 @@ package api
 
 import (
 	"log"
-	"os"
 	"runtime/debug"
 
 	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo"
 )
 
-func internalServerError(ctx *gin.Context) {
+// ErrorMiddleware is recover error middleware
+func ErrorMiddleware() echo.MiddlewareFunc {
+	return func(handler echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx *echo.Context) (err error) {
+			defer internalServerError(ctx)
+			return handler(ctx)
+		}
+	}
+}
+
+func internalServerError(ctx *echo.Context) {
 	cause := recover()
 	if cause == nil {
 		return
@@ -38,7 +48,7 @@ func internalServerError(ctx *gin.Context) {
 	}
 
 	// debug log
-	if os.Getenv("GIN_MODE") != "release" {
+	if ctx.Echo().Debug() {
 		log.Println("Error:", cause)
 		debug.PrintStack()
 	}
