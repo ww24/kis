@@ -2,6 +2,7 @@ package storage
 
 import (
 	"bytes"
+	"encoding/json"
 	"strings"
 
 	"github.com/syndtr/goleveldb/leveldb"
@@ -102,6 +103,13 @@ func (ld *LevelDBStore) Fetch(id string) (item *Item, err error) {
 	// read data from LevelDB and decode MessagePack
 	item = &Item{}
 	err = codec.NewDecoderBytes(data, ld.msgh).Decode(item)
+
+	// Convert metadata MessagePack -> JSON
+	err = json.Unmarshal(item.MsgpData, &item.JSONData)
+	if err != nil {
+		return
+	}
+
 	return
 }
 

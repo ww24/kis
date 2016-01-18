@@ -41,8 +41,10 @@ type Item struct {
 	UA string `codec:"ua" json:"-"`
 	// 画像データ
 	Webp []byte `codec:"file" json:"-"`
-	// 汎用データ (JSON)
-	Data map[string]interface{} `codec:"data" json:"data"`
+	// 汎用メタデータ (JSON) for MessagePack
+	MsgpData []byte `codec:"data" json:"-"`
+	// 汎用メタデータ (JSON) for API
+	JSONData map[string]interface{} `codec:"-" json:"data"`
 }
 
 const (
@@ -97,7 +99,7 @@ func (storage *Storage) GenerateID() (id string, err error) {
 }
 
 // Save method
-func (storage *Storage) Save(id string, reader io.Reader, metadata ...string) (err error) {
+func (storage *Storage) Save(id string, reader io.Reader, metadata ...map[string]interface{}) (err error) {
 	var data []byte
 	data, err = ioutil.ReadAll(reader)
 	if err != nil {
@@ -130,10 +132,10 @@ func (storage *Storage) Save(id string, reader io.Reader, metadata ...string) (e
 		UpdatedAt: time.Now(),
 	}
 
-	if len(metadata) > 0 && metadata[0] != "" {
-		err = json.Unmarshal([]byte(metadata[0]), &item.Data)
+	// check metadata existance and encode to JSON
+	if len(metadata) > 0 && metadata[0] != nil {
+		item.MsgpData, err = json.Marshal(metadata[0])
 		if err != nil {
-			err = ErrInvalidJSON
 			return
 		}
 	}
@@ -155,13 +157,6 @@ func (storage *Storage) Save(id string, reader io.Reader, metadata ...string) (e
 // ReadMetaData method
 func (storage *Storage) ReadMetaData(id string) (item *Item, err error) {
 	item, err = storage.store.Fetch(id)
-	if err != nil {
-		return
-	}
-	if item == nil {
-		return
-	}
-
 	return
 }
 
@@ -175,10 +170,7 @@ func (storage *Storage) Keys(prefixes ...string) (list []string, err error) {
 func (storage *Storage) Fetch(id string, extension string) (buff bytes.Buffer, mimeType string, err error) {
 	var item *Item
 	item, err = storage.store.Fetch(id)
-	if err != nil {
-		return
-	}
-	if item == nil {
+	if err != nil || item == nil {
 		return
 	}
 

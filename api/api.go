@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"mime/multipart"
 	"path/filepath"
 	"strings"
@@ -156,7 +157,18 @@ func NewAPI(router *echo.Group) (api *API) {
 			}
 			defer file.Close()
 
-			metadata := ctx.Form("metadata")
+			var metadata JSON
+			metadataStr := ctx.Form("metadata")
+			if metadataStr != "" {
+				err = json.Unmarshal([]byte(metadataStr), &metadata)
+				if err != nil {
+					err = ctx.JSON(400, JSON{
+						"status": "ng",
+						"error":  err.Error(),
+					})
+					return
+				}
+			}
 			err = store.Save(id, file, metadata)
 			switch err {
 			case storage.ErrUnsupportedMIMEType:
