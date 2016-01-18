@@ -141,8 +141,6 @@ func NewAPI(router *echo.Group) (api *API) {
 			id = authKey + ":" + id
 		}
 
-		metadata := request.Header.Get("X-Metadata")
-
 		// save image into store
 		switch contentType {
 		case "multipart/form-data":
@@ -157,12 +155,24 @@ func NewAPI(router *echo.Group) (api *API) {
 				return
 			}
 			defer file.Close()
+
+			metadata := ctx.Form("metadata")
 			err = store.Save(id, file, metadata)
+			switch err {
+			case storage.ErrUnsupportedMIMEType:
+			case storage.ErrInvalidJSON:
+				err = ctx.JSON(400, JSON{
+					"status": "ng",
+					"error":  err.Error(),
+				})
+				return
+			}
 			if err != nil {
 				panic(err)
 			}
 		default:
-			err = store.Save(id, request.Body, metadata)
+			// metadata not supported
+			err = store.Save(id, request.Body)
 			switch err {
 			case storage.ErrUnsupportedMIMEType:
 			case storage.ErrInvalidJSON:
