@@ -95,6 +95,9 @@ func NewAPI(router *echo.Group) (api *API) {
 			if err != nil {
 				panic(err)
 			}
+			if item == nil {
+				panic(404)
+			}
 			err = ctx.JSON(200, JSON{
 				"status": "ok",
 				"item":   item,
