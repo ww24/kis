@@ -43,7 +43,7 @@ func NewAPI(router *echo.Group) (api *API) {
 	api.router.Get("/", func(ctx *echo.Context) (err error) {
 		err = ctx.JSON(200, JSON{
 			"status":  "ok",
-			"version": "0.4.0",
+			"version": "1.0.0",
 		})
 
 		return
@@ -74,18 +74,14 @@ func NewAPI(router *echo.Group) (api *API) {
 		id := strings.TrimSuffix(idext, ext)
 
 		if ext == ".json" {
-			var width, height int
-			width, height, err = store.ReadMetaData(id)
+			var item *storage.Item
+			item, err = store.ReadMetaData(id)
 			if err != nil {
 				panic(err)
 			}
-			if width == 0 && height == 0 {
-				panic(404)
-			}
 			err = ctx.JSON(200, JSON{
 				"status": "ok",
-				"width":  width,
-				"height": height,
+				"item":   item,
 			})
 
 			return

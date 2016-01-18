@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/chai2010/webp"
 	"github.com/satori/go.uuid"
@@ -21,11 +22,26 @@ type Storage struct {
 }
 
 type store interface {
-	Save(string, image.Image) error
-	Keys() ([]string, error)
-	Fetch(string) (image.Image, error)
+	Save(string, *Item) error
+	Keys(prefixes ...string) ([]string, error)
+	Fetch(string) (*Item, error)
 	Exists(string) (bool, error)
 	Remove(string) error
+}
+
+// Item structure for storage
+type Item struct {
+	Width     int       `codec:"width" json:"width"`
+	Height    int       `codec:"height" json:"height"`
+	CreatedAt time.Time `codec:"created_at" json:"created_at"`
+	UpdatedAt time.Time `codec:"updated_at" json:"updated_at"`
+	// 登録者情報
+	IP string `codec:"ip" json:"-"`
+	UA string `codec:"ua" json:"-"`
+	// 画像データ
+	Webp []byte `codec:"file" json:"-"`
+	// 汎用データ
+	Data map[string]interface{} `codec:"data" json:"data"`
 }
 
 const (
@@ -102,24 +118,38 @@ func (storage *Storage) Save(id string, reader io.Reader) (err error) {
 		return
 	}
 
-	err = storage.store.Save(id, img)
+	rect := img.Bounds()
+	item := &Item{
+		Width:     rect.Max.X - rect.Min.X,
+		Height:    rect.Max.Y - rect.Min.Y,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	buff := &bytes.Buffer{}
+	err = webp.Encode(buff, img, &webp.Options{
+		Lossless: true,
+		Quality:  100,
+	})
+	if err != nil {
+		return
+	}
+	item.Webp = buff.Bytes()
+
+	err = storage.store.Save(id, item)
 	return
 }
 
 // ReadMetaData method
-func (storage *Storage) ReadMetaData(id string) (width, height int, err error) {
-	var img image.Image
-	img, err = storage.store.Fetch(id)
+func (storage *Storage) ReadMetaData(id string) (item *Item, err error) {
+	item, err = storage.store.Fetch(id)
 	if err != nil {
 		return
 	}
-	if img == nil {
+	if item == nil {
 		return
 	}
 
-	rect := img.Bounds()
-	width = rect.Max.X - rect.Min.X
-	height = rect.Max.Y - rect.Min.Y
 	return
 }
 
@@ -131,36 +161,44 @@ func (storage *Storage) Keys() (list []string, err error) {
 
 // Fetch method
 func (storage *Storage) Fetch(id string, extension string) (buff bytes.Buffer, mimeType string, err error) {
-	var img image.Image
-	img, err = storage.store.Fetch(id)
+	var item *Item
+	item, err = storage.store.Fetch(id)
 	if err != nil {
 		return
 	}
-	if img == nil {
+	if item == nil {
 		return
 	}
 
+	var img image.Image
+	img, err = webp.Decode(bytes.NewBuffer(item.Webp))
+	if err != nil {
+		return
+	}
+
+	buff = bytes.Buffer{}
 	switch extension {
 	case ".gif":
+		// 	lossy compression
 		err = gif.Encode(&buff, img, &gif.Options{
 			NumColors: 256,
 		})
 		mimeType = "image/gif"
 	case ".png":
+		// lossless compression
 		err = png.Encode(&buff, img)
 		mimeType = "image/png"
 	case "":
 		fallthrough
 	case ".jpg":
+		// 	lossy compression
 		err = jpeg.Encode(&buff, img, &jpeg.Options{
 			Quality: 99,
 		})
 		mimeType = "image/jpeg"
 	case ".webp":
-		err = webp.Encode(&buff, img, &webp.Options{
-			Lossless: true,
-			Quality:  100,
-		})
+		// lossless compression
+		buff = *bytes.NewBuffer(item.Webp)
 		mimeType = "image/webp"
 	default:
 		err = ErrUnsupportedFileExtension
