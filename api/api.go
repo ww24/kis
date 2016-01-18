@@ -56,6 +56,32 @@ func NewAPI(router *echo.Group) (api *API) {
 		return
 	})
 
+	// authKey is storage key prefix
+	api.router.Get("/list/:authKey", func(ctx *echo.Context) (err error) {
+		if isAdmin(ctx) == false {
+			panic(403)
+		}
+
+		var list []string
+
+		authKey := ctx.Param("authKey")
+		if authKey != "" {
+			list, err = store.Keys(authKey + ":")
+		} else {
+			list, err = store.Keys()
+		}
+		if err != nil {
+			panic(err)
+		}
+
+		err = ctx.JSON(200, JSON{
+			"status": "ok",
+			"list":   list,
+		})
+
+		return
+	})
+
 	// download image file
 	api.router.Get("/:idext", func(ctx *echo.Context) (err error) {
 		idext := ctx.Param("idext")
@@ -99,7 +125,7 @@ func NewAPI(router *echo.Group) (api *API) {
 		return
 	})
 
-	// upload image file
+	// upload image file (and metadata JSON)
 	api.router.Post("/", func(ctx *echo.Context) (err error) {
 		contentType := strings.Split(ctx.Request().Header.Get("Content-Type"), ";")[0]
 
@@ -108,12 +134,21 @@ func NewAPI(router *echo.Group) (api *API) {
 			panic(err)
 		}
 
+		request := ctx.Request()
+
+		authKey := request.Header.Get("Authorization")
+		if authKey != "" {
+			id = authKey + ":" + id
+		}
+
+		metadata := request.Header.Get("X-Metadata")
+
 		// save image into store
 		switch contentType {
 		case "multipart/form-data":
 			// receive image file
 			var file multipart.File
-			file, _, err = ctx.Request().FormFile("image")
+			file, _, err = request.FormFile("image")
 			if err != nil {
 				ctx.JSON(400, JSON{
 					"status": "ng",
@@ -122,13 +157,15 @@ func NewAPI(router *echo.Group) (api *API) {
 				return
 			}
 			defer file.Close()
-			err = store.Save(id, file)
+			err = store.Save(id, file, metadata)
 			if err != nil {
 				panic(err)
 			}
 		default:
-			err = store.Save(id, ctx.Request().Body)
-			if err == storage.ErrUnsupportedMIMEType {
+			err = store.Save(id, request.Body, metadata)
+			switch err {
+			case storage.ErrUnsupportedMIMEType:
+			case storage.ErrInvalidJSON:
 				err = ctx.JSON(400, JSON{
 					"status": "ng",
 					"error":  err.Error(),

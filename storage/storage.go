@@ -2,6 +2,7 @@ package storage
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"image"
 	"image/gif"
@@ -40,7 +41,7 @@ type Item struct {
 	UA string `codec:"ua" json:"-"`
 	// 画像データ
 	Webp []byte `codec:"file" json:"-"`
-	// 汎用データ
+	// 汎用データ (JSON)
 	Data map[string]interface{} `codec:"data" json:"data"`
 }
 
@@ -56,6 +57,8 @@ var (
 	ErrUnsupportedMIMEType = errors.New("unsupported MIME type")
 	// ErrUnsupportedFileExtension error value
 	ErrUnsupportedFileExtension = errors.New("unsupported file extension")
+	// ErrInvalidJSON error value
+	ErrInvalidJSON = errors.New("invalid json")
 )
 
 // NewStorage constructor
@@ -79,8 +82,9 @@ func NewStorage(storeType int) (storage *Storage) {
 
 // GenerateID will generate unique file ID
 func (storage *Storage) GenerateID() (id string, err error) {
-	idv4 := uuid.NewV4()
-	id = idv4.String()
+	// (生成順が辞書順に並ぶ為 UUIDv1 を採用する)
+	idv1 := uuid.NewV1()
+	id = idv1.String()
 
 	exists, err := storage.Exists(id)
 	if err != nil {
@@ -93,7 +97,7 @@ func (storage *Storage) GenerateID() (id string, err error) {
 }
 
 // Save method
-func (storage *Storage) Save(id string, reader io.Reader) (err error) {
+func (storage *Storage) Save(id string, reader io.Reader, metadata ...string) (err error) {
 	var data []byte
 	data, err = ioutil.ReadAll(reader)
 	if err != nil {
@@ -126,6 +130,14 @@ func (storage *Storage) Save(id string, reader io.Reader) (err error) {
 		UpdatedAt: time.Now(),
 	}
 
+	if len(metadata) > 0 && metadata[0] != "" {
+		err = json.Unmarshal([]byte(metadata[0]), &item.Data)
+		if err != nil {
+			err = ErrInvalidJSON
+			return
+		}
+	}
+
 	buff := &bytes.Buffer{}
 	err = webp.Encode(buff, img, &webp.Options{
 		Lossless: true,
@@ -154,8 +166,8 @@ func (storage *Storage) ReadMetaData(id string) (item *Item, err error) {
 }
 
 // Keys method
-func (storage *Storage) Keys() (list []string, err error) {
-	list, err = storage.store.Keys()
+func (storage *Storage) Keys(prefixes ...string) (list []string, err error) {
+	list, err = storage.store.Keys(prefixes...)
 	return
 }
 
