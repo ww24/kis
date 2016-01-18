@@ -1,12 +1,9 @@
 package api
 
 import (
-	"encoding/hex"
 	"mime/multipart"
 	"path/filepath"
 	"strings"
-
-	"crypto/sha256"
 
 	"github.com/labstack/echo"
 	"github.com/ww24/kis/storage"
@@ -15,8 +12,6 @@ import (
 var (
 	// use LevelDB instead of FileSystem
 	store = storage.NewStorage(storage.LevelDB)
-
-	hashedSecret string
 )
 
 // JSON type
@@ -25,12 +20,6 @@ type JSON map[string]interface{}
 // API structure
 type API struct {
 	router *echo.Group
-}
-
-func init() {
-	hashedSecret = authSecret("kis.json")["secret"].(string)
-	data := sha256.Sum256([]byte(hashedSecret))
-	hashedSecret = hex.EncodeToString(data[:])
 }
 
 // NewAPI constructor
@@ -50,7 +39,7 @@ func NewAPI(router *echo.Group) (api *API) {
 	})
 
 	api.router.Get("/list", func(ctx *echo.Context) (err error) {
-		if hashCompare(ctx.Query("secret"), hashedSecret) == false {
+		if isAdmin(ctx) == false {
 			panic(403)
 		}
 
