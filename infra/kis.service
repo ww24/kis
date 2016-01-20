@@ -4,13 +4,14 @@ After=network.target
 
 [Service]
 WorkingDirectory=/home/kis/kis
-ExecStart=/home/kis/kis/kis -port 3000 -mode release
+ExecStart=/home/kis/kis/kis -port 3000
 ExecReload=/bin/kill -s HUP $MAINPID
 ExecStop=/bin/kill -s QUIT $MAINPID
 Type=simple
 Restart=on-failure
 User=kis
 Group=www-data
+LimitNOFILE=65536
 
 [Install]
 WantedBy=multi-user.target
