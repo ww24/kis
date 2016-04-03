@@ -8,4 +8,8 @@ store/*.webp
 store/leveldb/*
 !.gitkeep
 
+# Glide
+vendor
+
+# Windows
 Thumbs.db

@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/labstack/echo"
 	"github.com/ww24/kis/storage"
+	echo "gopkg.in/labstack/echo.v1"
 )
 
 var (

@@ -4,7 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 
-	"github.com/labstack/echo"
+	echo "gopkg.in/labstack/echo.v1"
 )
 
 var (

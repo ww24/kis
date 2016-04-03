@@ -4,8 +4,7 @@ import (
 	"log"
 	"runtime/debug"
 
-	"github.com/gin-gonic/gin"
-	"github.com/labstack/echo"
+	echo "gopkg.in/labstack/echo.v1"
 )
 
 // ErrorMiddleware is recover error middleware
@@ -41,12 +40,12 @@ func internalServerError(ctx *echo.Context) {
 	}
 
 	if err, ok := cause.(error); ok {
-		ctx.JSON(500, gin.H{
+		ctx.JSON(500, JSON{
 			"status": "ng",
 			"error":  err.Error(),
 		})
 	} else {
-		ctx.JSON(500, gin.H{
+		ctx.JSON(500, JSON{
 			"status": "ng",
 			"error":  "unknown error",
 		})

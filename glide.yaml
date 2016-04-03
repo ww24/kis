@@ -1,0 +1,14 @@
+package: github.com/ww24/kis
+import:
+- package: github.com/chai2010/webp
+- package: github.com/satori/go.uuid
+- package: github.com/syndtr/goleveldb
+  subpackages:
+  - leveldb
+  - leveldb/util
+- package: github.com/ugorji/go
+  subpackages:
+  - codec
+- package: gopkg.in/labstack/echo.v1
+  subpackages:
+  - middleware

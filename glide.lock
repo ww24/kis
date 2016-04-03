@@ -1,0 +1,53 @@
+hash: 6562a72f5211f5d62729971ef6f97a6b022c32cb45535b40350b75c0211563d7
+updated: 2016-04-03T12:30:32.839538391+09:00
+imports:
+- name: github.com/chai2010/webp
+  version: 129aa059f8faa59f9e6a06b99b800a9e92e2680a
+- name: github.com/golang/snappy
+  version: 8939696c2214cde5dda896a76f5bf56e80a16855
+- name: github.com/labstack/gommon
+  version: f4ba73f8bcf88df1524069c117f7878cf530ee4e
+  subpackages:
+  - log
+  - color
+- name: github.com/mattn/go-colorable
+  version: 9cbef7c35391cca05f15f8181dc0b18bc9736dbb
+- name: github.com/mattn/go-isatty
+  version: 56b76bdf51f7708750eac80fa38b952bb9f32639
+- name: github.com/satori/go.uuid
+  version: f9ab0dce87d815821e221626b772e3475a0d2749
+- name: github.com/syndtr/goleveldb
+  version: 93fc893f2dadb96ffde441c7546cc67ea290a3a8
+  subpackages:
+  - leveldb
+  - leveldb/util
+  - leveldb/cache
+  - leveldb/comparer
+  - leveldb/errors
+  - leveldb/filter
+  - leveldb/iterator
+  - leveldb/journal
+  - leveldb/memdb
+  - leveldb/opt
+  - leveldb/storage
+  - leveldb/table
+- name: github.com/ugorji/go
+  version: a396ed22fc049df733440d90efe17475e3929ccb
+  subpackages:
+  - codec
+- name: github.com/valyala/fasttemplate
+  version: 3b874956e03f1636d171bda64b130f9135f42cff
+- name: golang.org/x/net
+  version: 3e8a7b0329d536af18e227bb21b6da4d1dbbe180
+  subpackages:
+  - context
+  - websocket
+- name: golang.org/x/sys
+  version: a60af9cbbc6ab800af4f2be864a31f423a0ae1f2
+  subpackages:
+  - unix
+- name: gopkg.in/labstack/echo.v1
+  version: 18a78a34eb4481722eef1ac9034eada58e3cf909
+  subpackages:
+  - middleware
+devImports: []

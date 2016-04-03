@@ -11,9 +11,9 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/labstack/echo"
-	"github.com/labstack/echo/middleware"
 	"github.com/ww24/kis/api"
+	echo "gopkg.in/labstack/echo.v1"
+	"gopkg.in/labstack/echo.v1/middleware"
 )
 
 var (
